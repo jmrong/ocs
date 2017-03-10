@@ -1,0 +1,71 @@
+body {
+    height: 100vh;
+    width: 100vw;
+    margin: 0;
+    padding: 40px;
+    box-sizing: border-box;
+}
+#playing-field,
+#action-center {
+    height: 100%;
+    display: inline-block;
+    border: 1px solid black;
+}
+#playing-field {
+    width: 70%;
+}
+#playing-field > div {
+    height: 10%;
+    width: 100%;
+    display: table;
+}
+#playing-field > div > div {
+    height: 100%;
+    width: 6.25%;
+    display: table-cell;
+    outline: 1px solid black;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 24px;
+}
+#action-center {
+    width: 25%;
+    float: right;
+}
+#playing-grid {
+    height: 100%;
+    width: 100%;
+}
+#dialogue,
+#action-center input {
+    width: 100%;
+    box-sizing: border-box;
+}
+#dialogue {
+    height: calc(100% - 24px);
+    padding: 6px;
+    overflow: auto;
+    font-family: monospace;
+}
+#dialogue p {
+    margin-top: 0;
+    margin-bottom: 4px;
+}
+#action-center input {
+    height: 24px;
+    border: none;
+    border-top: 1px solid black;
+    padding: 2px;
+    padding-left: 5px;
+    font-family: monospace;
+    outline: none;
+}
+.cell-unknown {
+    background-color: rgb(123, 164, 229);
+}
+.cell-discovered {
+    background-color: rgb(134, 188, 124);
+}
+.cell-enemy {
+    background-color: rgb(224, 118, 114);
+}
