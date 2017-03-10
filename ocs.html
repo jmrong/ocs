@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Online Combat Simulator v0.9</title>
+<title>Online Combat Simulator v1.0</title>
 <style>
 
 body { height: 100vh; width: 100vw; margin: 0; padding: 40px; box-sizing: border-box; }
@@ -47,7 +47,7 @@ body { height: 100vh; width: 100vw; margin: 0; padding: 40px; box-sizing: border
 // All commands
 
 function help() {
-	pushMsg("List of commands:<br><span style = 'text-decoration:underline'>help</span>- Displays this list<br><span style = 'text-decoration:underline'>begin</span>- Begins a battle with the AI<br><span style = 'text-decoration:underline'>attack</span> [position] [stepsx] [stepsy]- Moves a unit to the <em>relative</em> position, or fires at the enemy currently situated at the <em>relative</em> position<br><span style = 'text-decoration:underline'>configure</span>- Allows you to configure your army's starting position (only usable while not in battle)<br><span style = 'text-decoration:underline'>buy</span> [unit] [quantity]- Purchase a unit");
+	pushMsg("List of commands:<br><span style = 'text-decoration:underline'>help</span>- Displays this list<br><span style = 'text-decoration:underline'>begin</span>- Begins a battle with the AI<br><span style = 'text-decoration:underline'>attack</span> [position] [stepsx] [stepsy]- Moves a unit to the <em>relative</em> position, or fires at the enemy currently situated at the <em>relative</em> position<br><!--<span style = 'text-decoration:underline'>configure</span>- Allows you to configure your army's starting position (only usable while not in battle)<br><span style = 'text-decoration:underline'>buy</span> [unit] [quantity]- Purchase a unit<br>--><span style = 'text-decoration:underline'>clear</span>- Clears the console<br><span style = 'text-decoration:underline'>info</span>- Displays the changelog");
 };
 
 function attack(params) {
@@ -119,11 +119,8 @@ function attack(params) {
 		return false;
 	};
 	var enemyat = false;
-	for (var i = 0; i < enemyunits.length; i++) {
-		if (enemyunits[i].xpos == (Number(x) + xmove) && enemyunits[i].ypos == (Number(y) + ymove)) {
-			enemyat = i;
-			break;
-		};
+	if (getCell(Number(y) + ymove, Number(x) + xmove).dataset.enemyunit) {
+		enemyat = getCell(Number(y) + ymove, Number(x) + xmove).dataset.enemyunit;
 	};
 	if (enemyat !== false) {
 		var crit = Math.random();
@@ -160,7 +157,7 @@ function attack(params) {
 				};
 				if (eliminated) {
 					battle = false;
-					turn = false;
+					turn = null;
 					pushMsg("<b>You won the battle!</b>");
 					return false;
 				} else {
@@ -195,6 +192,14 @@ function attack(params) {
 	postAction();
 };
 
+function clear() {
+	document.getElementById("dialogue").innerHTML = "<p>Console was cleared</p>";
+};
+
+function info() {
+	pushMsg("Online Combat Simulator (OCS) v1.0<br>Created by Jack Rong<br><br>Changelog:<br><span style = 'text-decoration:underline'>1.0 (3/10/17)</span>- Initial relase");
+};
+
 // Define helper functions/objects
 
 function pushMsg(msg) {
@@ -206,7 +211,7 @@ String.prototype.toNormalCase = function() {
     return this.charAt(0).toUpperCase() + this.slice(1);
 }
 
-var commands = ["help", "begin", "attack", "configure", "buy"];
+var commands = ["help", "begin", "attack", "clear", "info"];
 function execCmd(event) {
 	if (event.keyCode == 13) {
 		var cmd = document.querySelectorAll("#action-center > input")[0].value;
@@ -353,7 +358,7 @@ function updateCells() {
 
 function checkEnemyCell(col, row) {
 	var violated = false;
-	if (col <= 0 || col > 10 || row <= 0 || row > 16) {
+	if (col <= 0 || col > 16 || row <= 0 || row > 10) {
 		return true;
 	};
 	for (var i = 0; i < enemyunits.length; i++) {
@@ -386,7 +391,7 @@ function enemyTurn(times) {
 	if (spotted.length !== 0) {
 		var greatest = 0;
 		for (var i = 0; i < spotted.length; i++) {
-			if (unitDesc[(spotted[i])[0].type].strength > greatest) {
+			if ([(spotted[i])[0].type].strength > greatest) {
 				greatest = i;
 			};
 		};
@@ -420,7 +425,7 @@ function enemyTurn(times) {
 				};
 				if (eliminated) {
 					battle = false;
-					turn = false;
+					turn = null;
 					pushMsg("<b>The enemies won the battle!</b>");
 					for (var j = 0; j < enemyunits.length; j++) {
 						getCell(enemyunits[j].ypos, enemyunits[j].xpos).className = "cell-enemy";
@@ -441,24 +446,28 @@ function enemyTurn(times) {
 		if (!checkEnemyCell(enemyunits[unitnum - 1].xpos - stepsnum, enemyunits[unitnum - 1].ypos)) {
 			enemyunits[unitnum - 1].xpos = enemyunits[unitnum - 1].xpos - stepsnum;
 			playerTurn();
+			return false;
 		} else {
-			if (times !== 4) {
-				enemyTurn(times++);
+			if (times !== 9) {
+				enemyTurn(times + 1);
 				return false;
 			} else {
 				playerTurn();
+				return false;
 			};
 		};
 	} else if (dirnum > 0.6 && dirnum <= 1.2) {
 		if (!checkEnemyCell(enemyunits[unitnum - 1].xpos, enemyunits[unitnum - 1].ypos - stepsnum)) {
 			enemyunits[unitnum - 1].ypos = enemyunits[unitnum - 1].ypos - stepsnum;
 			playerTurn();
+			return false;
 		} else {
-			if (times !== 4) {
-				enemyTurn(times++);
+			if (times !== 9) {
+				enemyTurn(times + 1);
 				return false;
 			} else {
 				playerTurn();
+				return false;
 			};
 		};
 	} else {
@@ -467,12 +476,14 @@ function enemyTurn(times) {
 			enemyunits[unitnum - 1].xpos = enemyunits[unitnum - 1].xpos - stepsnum;
 			enemyunits[unitnum - 1].ypos = enemyunits[unitnum - 1].ypos - secondsteps;
 			playerTurn();
+			return false;
 		} else {
-			if (times !== 4) {
-				enemyTurn(times++);
+			if (times !== 9) {
+				enemyTurn(times + 1);
 				return false;
 			} else {
 				playerTurn();
+				return false;
 			};
 		};
 	};
@@ -486,6 +497,7 @@ var actions = 0;
 var apt = 1;
 
 function postAction() {
+	updateCells();
 	if (actions = apt) {
 		turn = "enemy";
 		actions = 0;
@@ -499,6 +511,7 @@ function postAction() {
 
 function playerTurn() {
 	setTimeout(function() {
+		updateCells();
 		turn = "player";
 		pushMsg("Enemy turn over!");
 		pushMsg("Your turn!");
@@ -596,9 +609,9 @@ updateCells();
 
 // Initialize action center
 
-pushMsg("Welcome to the Online Combat Simulator v0.9");
-pushMsg("Progress: Level 1 (0/100 XP until Level 2)")
-pushMsg("Your army: 8 Infantry 1 Officer");
+pushMsg("Welcome to the Online Combat Simulator v1.0");
+// pushMsg("Progress: Level 1 (0/100 XP until Level 2)")
+// pushMsg("Your army: 8 Infantry 1 Officer");
 pushMsg("Type /help to access a list of commands");
 
 // Battle initialization
@@ -609,13 +622,106 @@ function begin() {
 		pushMsg("You are already in a battle");
 		return false;
 	};
+	var allcells = document.querySelectorAll("#playing-field > div > div");
+	var alllength = allcells.length;
+	for (var i = 0; i < alllength; i++) {
+		allcells[i].innerHTML = "";
+		delete allcells[i].dataset.unit;
+		allcells[i].className = "cell-unknown";
+	};
+	units = [];
+	startPos = [new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1), new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1), new Unit("I", 1, 20), new Unit("O", 1, 20)];
+	enemyunits = [];
+	enemyPos = [new Unit("I", 1, 20, "enemy"), new Unit("I", 1, 20, "enemy"), new Unit("I", 1, 20, "enemy"), new Unit("I", 1, 20, "enemy")];
+	rowsCovered = 1;
+	for (var i = 1; i <= 9; i++) {
+		if (i == 3 || i == 6 || i == 9) {
+			getCell(rowsCovered, (i / rowsCovered)).innerHTML = startPos[i - 1].type;
+			getCell(rowsCovered, (i / rowsCovered)).className = "cell-discovered";
+			getCell(rowsCovered, (i / rowsCovered)).dataset.unit = i;
+			units[units.length] = startPos[i - 1];
+			units[units.length - 1].xpos = i / rowsCovered;
+			units[units.length - 1].ypos = rowsCovered;
+			rowsCovered++;
+		} else {
+			getCell(rowsCovered, (i % 3)).innerHTML = startPos[i - 1].type;
+			getCell(rowsCovered, (i % 3)).className = "cell-discovered";
+			getCell(rowsCovered, (i % 3)).dataset.unit = i;
+			units[units.length] = startPos[i-1];
+			units[units.length - 1].xpos = i % 3;
+			units[units.length - 1].ypos = rowsCovered;
+		};
+	};
 	var enemies = document.querySelectorAll(".cell-enemy");
 	for (var i = 0; i < enemies.length; i++) {
 		enemies[i].className = "cell-unknown";
 	};
+	if (enemyPos.length == 4) {
+		getCell(9, 15).className = "cell-enemy";
+		getCell(9, 16).className = "cell-enemy";
+		getCell(10, 15).className = "cell-enemy";
+		getCell(10, 16).className = "cell-enemy";
+		enemyunits[0] = enemyPos[0];
+		enemyunits[0].xpos = 15;
+		enemyunits[0].ypos = 9;
+		enemyunits[1] = enemyPos[1];
+		enemyunits[1].xpos = 16;
+		enemyunits[1].ypos = 9;
+		enemyunits[2] = enemyPos[2];
+		enemyunits[2].xpos = 15;
+		enemyunits[2].ypos = 10;
+		enemyunits[3] = enemyPos[3];
+		enemyunits[3].xpos = 16;
+		enemyunits[3].ypos = 10;
+	} else {
+		getCell(8, 14).className = "cell-enemy";
+		getCell(8, 15).className = "cell-enemy";
+		getCell(8, 16).className = "cell-enemy";
+		getCell(9, 14).className = "cell-enemy";
+		getCell(9, 15).className = "cell-enemy";
+		getCell(9, 16).className = "cell-enemy";
+		getCell(10, 14).className = "cell-enemy";
+		getCell(10, 15).className = "cell-enemy";
+		getCell(10, 16).className = "cell-enemy";
+		enemyunits[0] = enemyPos[0];
+		enemyunits[0].xpos = 14;
+		enemyunits[0].ypos = 8;
+		enemyunits[1] = enemyPos[1];
+		enemyunits[1].xpos = 15;
+		enemyunits[1].ypos = 8;
+		enemyunits[2] = enemyPos[2];
+		enemyunits[2].xpos = 16;
+		enemyunits[2].ypos = 8;
+		enemyunits[3] = enemyPos[3];
+		enemyunits[3].xpos = 14;
+		enemyunits[3].ypos = 9;
+		enemyunits[0] = enemyPos[4];
+		enemyunits[0].xpos = 15;
+		enemyunits[0].ypos = 9;
+		enemyunits[1] = enemyPos[5];
+		enemyunits[1].xpos = 16;
+		enemyunits[1].ypos = 9;
+		enemyunits[2] = enemyPos[6];
+		enemyunits[2].xpos = 14;
+		enemyunits[2].ypos = 10;
+		enemyunits[3] = enemyPos[7];
+		enemyunits[3].xpos = 15;
+		enemyunits[3].ypos = 10;
+		enemyunits[0] = enemyPos[8];
+		enemyunits[0].xpos = 16;
+		enemyunits[0].ypos = 10;
+	};
+	updateCells();
+	var enemyconfig = document.querySelectorAll(".cell-enemy");
+	var enemylength = enemyconfig.length;
+	for (var i = 0; i < enemylength; i++) {
+		enemyconfig[i].innerHTML = "";
+		enemyconfig[i].className = "cell-unknown";
+		delete enemyconfig[i].dataset.enemyunit
+	};
 	pushMsg("Battle has begun!");
 	pushMsg("Enemy roster: 4 Infantry");
-	pushMsg("Actions per Turn: " + apt);
+	// pushMsg("Actions per Turn: " + apt);
 	pushMsg("Your turn!");
 	turn = "player";
 	battle = true;
