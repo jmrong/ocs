@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Online Combat Simulator v1.0</title>
+<title>Online Combat Simulator v1.1</title>
 <style>
 
 body { height: 100vh; width: 100vw; margin: 0; padding: 40px; box-sizing: border-box; }
@@ -32,6 +32,8 @@ body { height: 100vh; width: 100vw; margin: 0; padding: 40px; box-sizing: border
 
 .cell-enemy { background-color: rgb(224, 118, 114); }
 
+.cell-damaged { color: red; }
+
 </style>
 </head>
 <body>
@@ -47,7 +49,7 @@ body { height: 100vh; width: 100vw; margin: 0; padding: 40px; box-sizing: border
 // All commands
 
 function help() {
-	pushMsg("List of commands:<br><span style = 'text-decoration:underline'>help</span>- Displays this list<br><span style = 'text-decoration:underline'>begin</span>- Begins a battle with the AI<br><span style = 'text-decoration:underline'>attack</span> [position] [stepsx] [stepsy]- Moves a unit to the <em>relative</em> position, or fires at the enemy currently situated at the <em>relative</em> position<br><!--<span style = 'text-decoration:underline'>configure</span>- Allows you to configure your army's starting position (only usable while not in battle)<br><span style = 'text-decoration:underline'>buy</span> [unit] [quantity]- Purchase a unit<br>--><span style = 'text-decoration:underline'>clear</span>- Clears the console<br><span style = 'text-decoration:underline'>info</span>- Displays the changelog");
+	pushMsg("List of commands:<br><span style = 'text-decoration:underline'>help</span>- Displays this list<br><span style = 'text-decoration:underline'>begin</span>- Begins a battle with the AI<br><span style = 'text-decoration:underline'>attack</span> [unitpos] [stepsx] [stepsy]- Moves a unit to the <em>relative</em> position, or fires at the enemy currently situated at the <em>relative</em> position<br><!--<span style = 'text-decoration:underline'>configure</span>- Allows you to configure your army's starting position (only usable while not in battle)<br><span style = 'text-decoration:underline'>buy</span> [unit] [quantity]- Purchase a unit<br>--><span style = 'text-decoration:underline'>unitstat</span> [optional:unit]- View a generic unit's statistics, or display a list of units<br><span style = 'text-decoration:underline'>queryhp</span> [unitpos]- Gets the HP of the unit at the specified position (your side only)<br><span style = 'text-decoration:underline'>clear</span>- Clears the console<br><span style = 'text-decoration:underline'>info</span>- Displays the changelog");
 };
 
 function attack(params) {
@@ -67,6 +69,12 @@ function attack(params) {
 	var x = params[0].substring(0, params[0].indexOf("-"));
 	var y = params[0].substring(params[0].indexOf("-") + 1, params[0].length);
 	var curCell = getCell(y, x);
+	if (!curCell) {
+		pushMsg("Faulty order!");
+		actions++;
+		postAction();
+		return false;
+	};
 	if (!curCell.dataset.unit && !curCell.dataset.enemyunit) {
 		pushMsg("Faulty order!");
 		actions++;
@@ -135,14 +143,14 @@ function attack(params) {
 		var defense = (Math.random() * (unitDesc[enemyunits[enemyat].type].speed * 1.5 - unitDesc[enemyunits[enemyat].type].speed * 0.5) + unitDesc[enemyunits[enemyat].type].speed * 0.5);
 		var damage = ((unitDesc[units[curCell.dataset.unit - 1].type].strength * multiplier) - (unitDesc[enemyunits[enemyat].type].def * defense)).toFixed(2);
 		if (Math.random() + (unitDesc[enemyunits[enemyat].type].speed * (Math.random() * 0.1)) > unitDesc[enemyunits[enemyat].type].accuracy || damage <= 0) {
-			pushMsg("Player " + unitDesc[units[curCell.dataset.unit - 1].type].name + " tried to fire at Enemy " + unitDesc[enemyunits[enemyat].type].name + ", but missed.");
+			pushMsg("Player " + unitDesc[units[curCell.dataset.unit - 1].type].name + " (" + units[curCell.dataset.unit - 1].xpos + ", " + units[curCell.dataset.unit - 1].ypos + ") tried to fire at Enemy " + unitDesc[enemyunits[enemyat].type].name + " (" + enemyunits[enemyat].xpos + ", " + enemyunits[enemyat].ypos + "), but missed.");
 				actions++;
 				postAction();
 				return false;
 		} else {
 			enemyunits[enemyat].hp = (enemyunits[enemyat].hp - damage).toFixed(2);
 			if (enemyunits[enemyat].hp <= 0) {
-				pushMsg("Player " + unitDesc[units[curCell.dataset.unit - 1].type].name + " fired at Enemy " + unitDesc[enemyunits[enemyat].type].name + ", <b>who was destroyed</b> after receiving " + damage + " damage.");
+				pushMsg("Player " + unitDesc[units[curCell.dataset.unit - 1].type].name + " (" + units[curCell.dataset.unit - 1].xpos + ", " + units[curCell.dataset.unit - 1].ypos + ") fired at Enemy " + unitDesc[enemyunits[enemyat].type].name + " (" + enemyunits[enemyat].xpos + ", " + enemyunits[enemyat].ypos + "), <b>who was destroyed</b> after receiving " + damage + " damage.");
 				document.querySelectorAll("[data-enemyunit='" + enemyat + "']")[0].innerHTML = "";
 				document.querySelectorAll("[data-enemyunit='" + enemyat + "']")[0].className = "cell-unknown";
 				delete document.querySelectorAll("[data-enemyunit='" + enemyat + "']")[0].dataset.enemyunit;
@@ -166,7 +174,7 @@ function attack(params) {
 					return false;
 				};
 			} else {
-				pushMsg("Player " + unitDesc[units[curCell.dataset.unit - 1].type].name + " fired at Enemy " + unitDesc[enemyunits[enemyat].type].name + " and dealt " + damage + " damage. Enemy " + unitDesc[enemyunits[enemyat].type].name + "'s HP is now " + enemyunits[enemyat].hp + ".");
+				pushMsg("Player " + unitDesc[units[curCell.dataset.unit - 1].type].name + " (" + units[curCell.dataset.unit - 1].xpos + ", " + units[curCell.dataset.unit - 1].ypos + ") fired at Enemy " + unitDesc[enemyunits[enemyat].type].name + " (" + enemyunits[enemyat].xpos + ", " + enemyunits[enemyat].ypos + ") and dealt " + damage + " damage. Enemy " + unitDesc[enemyunits[enemyat].type].name + "'s HP is now " + enemyunits[enemyat].hp + ".");
 				actions++;
 				postAction();
 				return false;
@@ -197,7 +205,56 @@ function clear() {
 };
 
 function info() {
-	pushMsg("Online Combat Simulator (OCS) v1.0<br>Created by Jack Rong<br><br>Changelog:<br><span style = 'text-decoration:underline'>1.0 (3/10/17)</span>- Initial relase");
+	pushMsg("Online Combat Simulator (OCS) v1.1<br>Created by Jack Rong<br><br>Changelog:<br><span style = 'text-decoration:underline'>1.1 (indev)</span>- Visual improvements, messages now show unit coordinates, improved vision system, added /unitstat and /queryhp<br><span style = 'text-decoration:underline'>1.0 (3/10/17)</span>- Initial relase");
+};
+
+function unitstat(params) {
+	if (params[0] == undefined || params[0].length <= 0) {
+		var unitlist = "";
+		for (var i in unitDesc) {
+			if (i !== "Dead") {
+				unitlist += unitDesc[i].name + " ";
+			};
+		};
+		pushMsg("List of units: " + unitlist);
+		return false;
+	};
+	var unittype = params[0];
+	if (unittype !== "Dead" && unitDesc[unittype] !== undefined) {
+		var unitObj = unitDesc[unittype];
+		pushMsg(unitObj.name + " stats: " + unitObj.strength + " strength " + unitObj.def + " defense " + unitObj.vision + " vision " + unitObj.speed + " speed " + unitObj.hp + " base hp " + unitObj.accuracy + " accuracy");
+	} else {
+		pushMsg("That doesn't exist.");
+	};
+};
+
+function queryhp(params) {
+	if (params[0].length <= 0) {
+		pushMsg("Missing required parameter.");
+		return false;
+	};
+	if (!battle) {
+		pushMsg("This command can only be used while in battle.");
+		return false;
+	};
+	var x = params[0].substring(0, params[0].indexOf("-"));
+	var y = params[0].substring(params[0].indexOf("-") + 1, params[0].length);
+	if (x <= 0 || y <= 0) {
+		pushMsg("Couldn't find that unit.");
+		return false;
+	};
+	var queryunit = false;
+	for (var i = 0; i < units.length; i++) {
+		if (units[i].xpos == x && units[i].ypos == y) {
+			queryunit = i;
+			break;
+		};
+	};
+	if (queryunit !== false || x <= 0 || y <= 0) {
+		pushMsg("HP: " + units[queryunit].hp);
+	} else {
+		pushMsg("Couldn't find that unit.");
+	};
 };
 
 // Define helper functions/objects
@@ -211,7 +268,7 @@ String.prototype.toNormalCase = function() {
     return this.charAt(0).toUpperCase() + this.slice(1);
 }
 
-var commands = ["help", "begin", "attack", "clear", "info"];
+var commands = ["help", "begin", "attack", "clear", "info", "unitstat", "queryhp"];
 function execCmd(event) {
 	if (event.keyCode == 13) {
 		var cmd = document.querySelectorAll("#action-center > input")[0].value;
@@ -248,6 +305,7 @@ function getCell(row, col) {
 var unitDesc = {
 	"I": {strength: 3, def: 1, vision: 1, speed: 1, hp: 20, accuracy: 0.7, name: "Infantry"},
 	"O": {strength: 3, def: 2, vision: 2, speed: 2, hp: 20, accuracy: 0.8, name: "Officer"},
+	"C": {strength: 4, def: 3, vision: 2, speed: 3, hp: 25, accuracy: 0.75, name: "Cavalry"},
 	"T": {strength: 5, def: 3, vision: 2, speed: 1, hp: 35, accuracy: 0.75, name: "Tank"},
 	"M": {strength: 4, def: 2, vision: 7, speed: 1, hp: 10, accuracy: 0.85, name: "Mortar"},
 	"S": {strength: 2, def: 1, vision: 3, speed: 3, hp: 20, accuracy: 0.65, name: "Scout"},
@@ -293,44 +351,18 @@ function updateCells() {
 			if (curCell !== undefined) {
 				vision = curCell.vision;
 			};
-			var discoveredCells = [];
-			if (vision == 1) {
-				discoveredCells[discoveredCells.length] = [i - 1, j - 1];
-				discoveredCells[discoveredCells.length] = [i - 1, j];
-				discoveredCells[discoveredCells.length] = [i - 1, j + 1];
-				discoveredCells[discoveredCells.length] = [i, j - 1];
-				discoveredCells[discoveredCells.length] = [i, j];
-				discoveredCells[discoveredCells.length] = [i, j + 1];
-				discoveredCells[discoveredCells.length] = [i + 1, j - 1];
-				discoveredCells[discoveredCells.length] = [i + 1, j];
-				discoveredCells[discoveredCells.length] = [i + 1, j + 1];
+			if (getCell(i, j).dataset.unit) {
+				if (units[getCell(i, j).dataset.unit - 1].hp <= (unitDesc[getCell(i, j).innerHTML].hp / 2)) {
+					getCell(i, j).style.color = "#920606";
+				};
 			};
-			if (vision == 2) {
-				discoveredCells[discoveredCells.length] = [i - 1, j - 1];
-				discoveredCells[discoveredCells.length] = [i - 1, j];
-				discoveredCells[discoveredCells.length] = [i - 1, j + 1];
-				discoveredCells[discoveredCells.length] = [i, j - 1];
-				discoveredCells[discoveredCells.length] = [i, j];
-				discoveredCells[discoveredCells.length] = [i, j + 1];
-				discoveredCells[discoveredCells.length] = [i + 1, j - 1];
-				discoveredCells[discoveredCells.length] = [i + 1, j];
-				discoveredCells[discoveredCells.length] = [i + 1, j + 1];
-				discoveredCells[discoveredCells.length] = [i - 2, j];
-				discoveredCells[discoveredCells.length] = [i + 2, j];
-				discoveredCells[discoveredCells.length] = [i, j - 2];
-				discoveredCells[discoveredCells.length] = [i, j + 2];
-				discoveredCells[discoveredCells.length] = [i + 2, j + 2];
-				discoveredCells[discoveredCells.length] = [i + 2, j - 2];
-				discoveredCells[discoveredCells.length] = [i - 2, j + 2];
-				discoveredCells[discoveredCells.length] = [i - 2, j - 2];
-				discoveredCells[discoveredCells.length] = [i - 2, j - 1];
-				discoveredCells[discoveredCells.length] = [i - 2, j + 1];
-				discoveredCells[discoveredCells.length] = [i + 2, j - 1];
-				discoveredCells[discoveredCells.length] = [i + 2, j + 1];
-				discoveredCells[discoveredCells.length] = [i - 1, j - 2];
-				discoveredCells[discoveredCells.length] = [i + 1, j - 2];
-				discoveredCells[discoveredCells.length] = [i - 1, j + 2];
-				discoveredCells[discoveredCells.length] = [i + 1, j + 2];
+			var discoveredCells = [];
+			for (var k = (0 - vision); k < (vision + 1); k++) {
+				for (var l = (0 - vision); l < (vision + 1); l++) {
+					if (vision !== 0) {
+						discoveredCells[discoveredCells.length] = [i + k, j + l];
+					};
+				};
 			};
 			for (var k = 0; k < discoveredCells.length; k++) {
 				if (!((discoveredCells[k])[0] <= 0 || (discoveredCells[k])[1] <= 0)) {
@@ -346,6 +378,9 @@ function updateCells() {
 							getCell((discoveredCells[k])[0],(discoveredCells[k])[1]).className = "cell-enemy";
 							getCell((discoveredCells[k])[0],(discoveredCells[k])[1]).innerHTML = enemyunits[isenemy].type;
 							getCell((discoveredCells[k])[0],(discoveredCells[k])[1]).dataset.enemyunit = isenemy;
+							if (enemyunits[isenemy].hp <= (unitDesc[enemyunits[isenemy].type].hp / 2)) {
+								getCell((discoveredCells[k])[0],(discoveredCells[k])[1]).style.color = "#920606";
+							};
 						} else {
 							getCell((discoveredCells[k])[0],(discoveredCells[k])[1]).className = "cell-discovered";
 						};
@@ -384,7 +419,7 @@ function enemyTurn(times) {
 		var enemyvision = unitDesc[enemyunits[i].type].vision;
 		for (var j = 0; j < units.length; j++) {
 			if (Math.abs(units[j].xpos - enemyunits[i].xpos) <= enemyvision && Math.abs(units[j].ypos - enemyunits[i].ypos) <= enemyvision) {
-				spotted[spotted.length] = [enemyunits[i], units[j], j];
+				spotted[spotted.length] = [enemyunits[i], units[j], j, i];
 			};
 		};
 	};
@@ -407,11 +442,11 @@ function enemyTurn(times) {
 		var defense = (Math.random() * (unitDesc[(spotted[greatest])[1].type].speed * 1.5 - unitDesc[(spotted[greatest])[1].type].speed * 0.5) + unitDesc[(spotted[greatest])[1].type].speed * 0.5);
 		var damage = ((unitDesc[(spotted[greatest])[0].type].strength * multiplier) - (unitDesc[(spotted[greatest])[1].type].def * defense)).toFixed(2);
 		if (Math.random() + (unitDesc[(spotted[greatest])[1].type].speed * (Math.random() * 0.1)) > unitDesc[(spotted[greatest])[0].type].accuracy || damage <= 0) {
-			pushMsg("Enemy " + unitDesc[(spotted[greatest])[0].type].name + " spotted Player " + unitDesc[(spotted[greatest])[1].type].name + " and tried to fire, but missed.");
+			pushMsg("Enemy " + unitDesc[(spotted[greatest])[0].type].name + " (" + enemyunits[(spotted[greatest])[3]].xpos + ", " + enemyunits[(spotted[greatest])[3]].ypos + ") spotted Player " + unitDesc[(spotted[greatest])[1].type].name + " (" + units[(spotted[greatest])[2]].xpos + ", " + units[(spotted[greatest])[2]].ypos + ") and tried to fire, but missed.");
 		} else {
 			units[(spotted[greatest])[2]].hp = (units[(spotted[greatest])[2]].hp - damage).toFixed(2);
 			if (units[(spotted[greatest])[2]].hp <= 0) {
-				pushMsg("Enemy " + unitDesc[(spotted[greatest])[0].type].name + " fired at Player " + unitDesc[(spotted[greatest])[1].type].name + ", <b>who was destroyed</b> after receiving " + damage + " damage.");
+				pushMsg("Enemy " + unitDesc[(spotted[greatest])[0].type].name + " (" + enemyunits[(spotted[greatest])[3]].xpos + ", " + enemyunits[(spotted[greatest])[3]].ypos + ") fired at Player " + unitDesc[(spotted[greatest])[1].type].name + " (" + units[(spotted[greatest])[2]].xpos + ", " + units[(spotted[greatest])[2]].ypos + "), <b>who was destroyed</b> after receiving " + damage + " damage.");
 				document.querySelectorAll("[data-unit='" + ((spotted[greatest])[2] + 1) + "']")[0].innerHTML = "";
 				delete document.querySelectorAll("[data-unit='" + ((spotted[greatest])[2] + 1) + "']")[0].dataset.unit;
 				units[(spotted[greatest])[2]] = new Unit("Dead", 0, 0, "none", 0, 0);
@@ -434,7 +469,7 @@ function enemyTurn(times) {
 					return false;
 				};
 			} else {
-				pushMsg("Enemy " + unitDesc[(spotted[greatest])[0].type].name + " spotted Player " + unitDesc[(spotted[greatest])[1].type].name + " and dealt " + damage + " damage. Player " + unitDesc[(spotted[greatest])[1].type].name + "'s HP is now " + units[(spotted[greatest])[2]].hp + ".");
+				pushMsg("Enemy " + unitDesc[(spotted[greatest])[0].type].name + " (" + enemyunits[(spotted[greatest])[3]].xpos + ", " + enemyunits[(spotted[greatest])[3]].ypos + ") spotted Player " + unitDesc[(spotted[greatest])[1].type].name + " (" + units[(spotted[greatest])[2]].xpos + ", " + units[(spotted[greatest])[2]].ypos + ") and dealt " + damage + " damage. Player " + unitDesc[(spotted[greatest])[1].type].name + "'s HP is now " + units[(spotted[greatest])[2]].hp + ".");
 			};
 		};
 		playerTurn();
@@ -528,7 +563,7 @@ for (var i = 0; i < 10; i++) {
 	document.getElementById("playing-field").innerHTML += "<div id = 'row-" + (10 - i) + "'>" + sixteencells + "</div>";
 };
 
-var startPos = [new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1), new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1), new Unit("I", 1, 20), new Unit("O", 1, 20)];
+var startPos = [new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1), new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1), new Unit("I", 1, 20), new Unit("O", 1)];
 var rowsCovered = 1;
 for (var i = 1; i <= 9; i++) {
 	if (i == 3 || i == 6 || i == 9) {
@@ -609,7 +644,7 @@ updateCells();
 
 // Initialize action center
 
-pushMsg("Welcome to the Online Combat Simulator v1.0");
+pushMsg("Welcome to the Online Combat Simulator v1.1");
 // pushMsg("Progress: Level 1 (0/100 XP until Level 2)")
 // pushMsg("Your army: 8 Infantry 1 Officer");
 pushMsg("Type /help to access a list of commands");
@@ -630,7 +665,7 @@ function begin() {
 		allcells[i].className = "cell-unknown";
 	};
 	units = [];
-	startPos = [new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1), new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1), new Unit("I", 1, 20), new Unit("O", 1, 20)];
+	startPos = [new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1), new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1), new Unit("I", 1, 20), new Unit("O", 1)];
 	enemyunits = [];
 	enemyPos = [new Unit("I", 1, 20, "enemy"), new Unit("I", 1, 20, "enemy"), new Unit("I", 1, 20, "enemy"), new Unit("I", 1, 20, "enemy")];
 	rowsCovered = 1;
