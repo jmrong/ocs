@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Online Combat Simulator v1.1</title>
+<title>Online Combat Simulator v1.2</title>
 <style>
 
-body { height: 100vh; width: 100vw; margin: 0; padding: 40px; box-sizing: border-box; }
+body { height: 100vh; width: 100vw; margin: 0; padding: 40px; box-sizing: border-box; font-family: monospace; }
 
 #playing-field, #action-center { height: 100%; display: inline-block; border: 1px solid black; }
 
@@ -49,155 +49,175 @@ body { height: 100vh; width: 100vw; margin: 0; padding: 40px; box-sizing: border
 // All commands
 
 function help() {
-	pushMsg("List of commands:<br><span style = 'text-decoration:underline'>help</span>- Displays this list<br><span style = 'text-decoration:underline'>begin</span>- Begins a battle with the AI<br><span style = 'text-decoration:underline'>attack</span> [unitpos] [stepsx] [stepsy]- Moves a unit to the <em>relative</em> position, or fires at the enemy currently situated at the <em>relative</em> position<br><!--<span style = 'text-decoration:underline'>configure</span>- Allows you to configure your army's starting position (only usable while not in battle)<br><span style = 'text-decoration:underline'>buy</span> [unit] [quantity]- Purchase a unit<br>--><span style = 'text-decoration:underline'>unitstat</span> [optional:unit]- View a generic unit's statistics, or display a list of units<br><span style = 'text-decoration:underline'>queryhp</span> [unitpos]- Gets the HP of the unit at the specified position (your side only)<br><span style = 'text-decoration:underline'>clear</span>- Clears the console<br><span style = 'text-decoration:underline'>info</span>- Displays the changelog");
+	pushMsg("List of commands:<br><span style = 'text-decoration:underline'>help</span>- Displays this list<br><span style = 'text-decoration:underline'>begin</span>- Begins a battle with the AI<br><span style = 'text-decoration:underline'>attack</span> [unitpos] [stepsx] [stepsy]- Moves a unit to the <em>relative</em> position, or fires at the enemy currently situated at the <em>relative</em> position<br><!--<span style = 'text-decoration:underline'>configure</span>- Allows you to configure your army's starting position (only usable while not in battle)<br><span style = 'text-decoration:underline'>buy</span> [unit] [quantity]- Purchase a unit<br>--><span style = 'text-decoration:underline'>level [level] [optional:enemylevel]</span>- Sets the level for both sides, or for each side<br><span style = 'text-decoration:underline'>unitstat</span> [optional:unit]- View a generic unit's statistics, or display a list of units<br><span style = 'text-decoration:underline'>queryhp</span> [unitpos]- Gets the HP of the unit at the specified position (your side only)<br><span style = 'text-decoration:underline'>objective</span>- Displays the remaining enemy units<br><span style = 'text-decoration:underline'>clear</span>- Clears the console<br><span style = 'text-decoration:underline'>info</span>- Displays the changelog<br><span style = 'text-decoration:underline'>firsttime</span>- Displays starter information");
 };
 
 function attack(params) {
-	if (turn == null) {
-		pushMsg("This command may only be used while in battle.");
-		return false;
-	} else if (turn == "enemy") {
-		pushMsg("It's not your turn.");
-		return false;
-	}
-	if (params.length !== 3 || (params[1] == 0 && params[2] == 0)) {
-		pushMsg("Faulty order!");
-		actions++;
-		postAction();
-		return false;
-	};
-	var x = params[0].substring(0, params[0].indexOf("-"));
-	var y = params[0].substring(params[0].indexOf("-") + 1, params[0].length);
-	var curCell = getCell(y, x);
-	if (!curCell) {
-		pushMsg("Faulty order!");
-		actions++;
-		postAction();
-		return false;
-	};
-	if (!curCell.dataset.unit && !curCell.dataset.enemyunit) {
-		pushMsg("Faulty order!");
-		actions++;
-		postAction();
-		return false;
-	};
-	var curType = curCell.innerHTML.charAt(0);
-	var xmove = 0;
-	var ymove = 0;
-	if (Math.abs(params[1]) > unitDesc[curType].speed) {
-		if (params[1] > 0) {
-			xmove = unitDesc[curType].speed;
-		} else if (params[1] < 0) {
-			xmove = -1 * unitDesc[curType].speed;
-		};
-	} else {
-		if (params[1] > 0) {
-			xmove = Math.floor(params[1]);
-		} else if (params[1] < 0) {
-			xmove = Math.ceil(params[1]);
-		} else {
-			xmove = 0;
-		};
-	};
-	if (Math.abs(params[2]) > unitDesc[curType].speed) {
-		if (params[2] > 0) {
-			ymove = unitDesc[curType].speed;
-		} else if (params[2] < 0) {
-			ymove = -1 * unitDesc[curType].speed;
-		};
-	} else {
-		if (params[2] > 0) {
-			ymove = Math.floor(params[2]);
-		} else if (params[2] < 0) {
-			ymove = Math.ceil(params[2]);
-		} else {
-			ymove = 0;
-		};
-	};
-	if ((Number(y) + ymove) <= 0 || (Number(x) + xmove) <= 0) {
-		pushMsg("Faulty order!");
-		actions++;
-		postAction();
-		return false;
-	};
-	if (getCell(Number(y) + ymove, Number(x) + xmove) == undefined) {
-		pushMsg("Faulty order!");
-		actions++;
-		postAction();
-		return false;
-	};
-	var enemyat = false;
-	if (getCell(Number(y) + ymove, Number(x) + xmove).dataset.enemyunit) {
-		enemyat = getCell(Number(y) + ymove, Number(x) + xmove).dataset.enemyunit;
-	};
-	if (enemyat !== false) {
-		var crit = Math.random();
-		var multiplier;
-		if (crit < 0.35) {
-			multiplier = (Math.random() * 0.5) + 0.5;
-		} else if (crit >= 0.35 && crit < 0.85) {
-			multiplier = (Math.random() * 1.6) + 1;
-		} else {
-			multiplier = (Math.random() * 1.2) + 2.6;
-		};
-		var defense = (Math.random() * (unitDesc[enemyunits[enemyat].type].speed * 1.5 - unitDesc[enemyunits[enemyat].type].speed * 0.5) + unitDesc[enemyunits[enemyat].type].speed * 0.5);
-		var damage = ((unitDesc[units[curCell.dataset.unit - 1].type].strength * multiplier) - (unitDesc[enemyunits[enemyat].type].def * defense)).toFixed(2);
-		if (Math.random() + (unitDesc[enemyunits[enemyat].type].speed * (Math.random() * 0.1)) > unitDesc[enemyunits[enemyat].type].accuracy || damage <= 0) {
-			pushMsg("Player " + unitDesc[units[curCell.dataset.unit - 1].type].name + " (" + units[curCell.dataset.unit - 1].xpos + ", " + units[curCell.dataset.unit - 1].ypos + ") tried to fire at Enemy " + unitDesc[enemyunits[enemyat].type].name + " (" + enemyunits[enemyat].xpos + ", " + enemyunits[enemyat].ypos + "), but missed.");
-				actions++;
-				postAction();
-				return false;
-		} else {
-			enemyunits[enemyat].hp = (enemyunits[enemyat].hp - damage).toFixed(2);
-			if (enemyunits[enemyat].hp <= 0) {
-				pushMsg("Player " + unitDesc[units[curCell.dataset.unit - 1].type].name + " (" + units[curCell.dataset.unit - 1].xpos + ", " + units[curCell.dataset.unit - 1].ypos + ") fired at Enemy " + unitDesc[enemyunits[enemyat].type].name + " (" + enemyunits[enemyat].xpos + ", " + enemyunits[enemyat].ypos + "), <b>who was destroyed</b> after receiving " + damage + " damage.");
-				document.querySelectorAll("[data-enemyunit='" + enemyat + "']")[0].innerHTML = "";
-				document.querySelectorAll("[data-enemyunit='" + enemyat + "']")[0].className = "cell-unknown";
-				delete document.querySelectorAll("[data-enemyunit='" + enemyat + "']")[0].dataset.enemyunit;
-				enemyunits[enemyat] = new Unit("Dead", 0, 0, "none", 0, 0);
-				updateCells();
-				var eliminated = true;
-				for (var i = 0; i < enemyunits.length; i++) {
-					if (enemyunits[i].hp !== 0) {
-						eliminated = false;
-						break;
-					};
-				};
-				if (eliminated) {
-					battle = false;
-					turn = null;
-					pushMsg("<b>You won the battle!</b>");
-					return false;
-				} else {
-					actions++;
-					postAction();
-					return false;
-				};
-			} else {
-				pushMsg("Player " + unitDesc[units[curCell.dataset.unit - 1].type].name + " (" + units[curCell.dataset.unit - 1].xpos + ", " + units[curCell.dataset.unit - 1].ypos + ") fired at Enemy " + unitDesc[enemyunits[enemyat].type].name + " (" + enemyunits[enemyat].xpos + ", " + enemyunits[enemyat].ypos + ") and dealt " + damage + " damage. Enemy " + unitDesc[enemyunits[enemyat].type].name + "'s HP is now " + enemyunits[enemyat].hp + ".");
-				actions++;
-				postAction();
-				return false;
-			};
-		};
-	};
-	if (getCell(Number(y) + ymove, Number(x) + xmove).innerHTML !== "") {
-		pushMsg("Faulty order!");
-		actions++;
-		postAction();
-		return false;
-	};
-	curCell.innerHTML = "";
-	curCell.className = "cell-unknown";
-	getCell((Number(y) + ymove), (Number(x) + xmove)).innerHTML = units[curCell.dataset.unit - 1].type;
-	getCell((Number(y) + ymove), (Number(x) + xmove)).dataset.unit = curCell.dataset.unit;
-	units[curCell.dataset.unit - 1].xpos = (Number(x) + xmove);
-	units[curCell.dataset.unit - 1].ypos = (Number(y) + ymove);
-	delete curCell.dataset.unit;
-	updateCells();
-	pushMsg("Unit moved!");
-	actions++;
-	postAction();
+    if (turn == null) {
+        pushMsg("This command may only be used while in battle.");
+        return false;
+    } else if (turn == "enemy") {
+        pushMsg("It's not your turn.");
+        return false;
+    }
+    if (params.length !== 3 || (params[1] == 0 && params[2] == 0)) {
+        pushMsg("Faulty order!");
+        actions++;
+        postAction();
+        return false;
+    };
+    var x = params[0].substring(0, params[0].indexOf("-"));
+    var y = params[0].substring(params[0].indexOf("-") + 1, params[0].length);
+    var curCell = getCell(y, x);
+    if (!curCell) {
+        pushMsg("Faulty order!");
+        actions++;
+        postAction();
+        return false;
+    };
+    if (!curCell.dataset.unit && !curCell.dataset.enemyunit) {
+        pushMsg("Faulty order!");
+        actions++;
+        postAction();
+        return false;
+    };
+    var curType = curCell.innerHTML.charAt(0);
+    var xmove = 0;
+    var ymove = 0;
+    if (Math.abs(params[1]) > unitDesc[curType].vision) {
+        if (params[1] > 0) {
+            xmove = unitDesc[curType].vision;
+        } else if (params[1] < 0) {
+            xmove = -1 * unitDesc[curType].vision;
+        };
+    } else {
+        if (params[1] > 0) {
+            xmove = Math.floor(params[1]);
+        } else if (params[1] < 0) {
+            xmove = Math.ceil(params[1]);
+        } else {
+            xmove = 0;
+        };
+    };
+    if (Math.abs(params[2]) > unitDesc[curType].vision) {
+        if (params[2] > 0) {
+            ymove = unitDesc[curType].vision;
+        } else if (params[2] < 0) {
+            ymove = -1 * unitDesc[curType].vision;
+        };
+    } else {
+        if (params[2] > 0) {
+            ymove = Math.floor(params[2]);
+        } else if (params[2] < 0) {
+            ymove = Math.ceil(params[2]);
+        };
+    };
+    var enemyat = false;
+    if (getCell(Number(y) + ymove, Number(x) + xmove) && getCell(Number(y) + ymove, Number(x) + xmove).dataset.enemyunit) {
+        enemyat = getCell(Number(y) + ymove, Number(x) + xmove).dataset.enemyunit;
+    };
+    if (enemyat !== false) {
+        var crit = Math.random();
+        var multiplier;
+        if (crit < 0.2) {
+            multiplier = (Math.random() * 0.5) + 0.5;
+        } else if (crit >= 0.2 && crit < 0.85) {
+            multiplier = (Math.random() * 1.6) + 1;
+        } else {
+            multiplier = (Math.random() * 1.2) + 2.6;
+        };
+        var defense = (Math.random() * (unitDesc[enemyunits[enemyat].type].speed * 1.5 - unitDesc[enemyunits[enemyat].type].speed * 0.5) + (unitDesc[units[curCell.dataset.unit - 1].type].speed - unitDesc[enemyunits[enemyat].type].speed) * 0.5) * (Math.random() * 2) + 0.75;
+        var damage = ((unitDesc[units[curCell.dataset.unit - 1].type].strength * multiplier) - (unitDesc[enemyunits[enemyat].type].def * defense)).toFixed(2);
+        if (Math.random() + ((unitDesc[enemyunits[enemyat].type].speed / 2) * (Math.random() - 0.9)) > unitDesc[units[curCell.dataset.unit - 1].type].accuracy || damage <= 0) {
+            pushMsg("Player " + unitDesc[units[curCell.dataset.unit - 1].type].name + " (" + units[curCell.dataset.unit - 1].xpos + ", " + units[curCell.dataset.unit - 1].ypos + ") tried to fire at Enemy " + unitDesc[enemyunits[enemyat].type].name + " (" + enemyunits[enemyat].xpos + ", " + enemyunits[enemyat].ypos + "), but missed.");
+            actions++;
+            postAction();
+            return false;
+        } else {
+            enemyunits[enemyat].hp = (enemyunits[enemyat].hp - damage).toFixed(2);
+            if (enemyunits[enemyat].hp <= 0) {
+                pushMsg("Player " + unitDesc[units[curCell.dataset.unit - 1].type].name + " (" + units[curCell.dataset.unit - 1].xpos + ", " + units[curCell.dataset.unit - 1].ypos + ") fired at Enemy " + unitDesc[enemyunits[enemyat].type].name + " (" + enemyunits[enemyat].xpos + ", " + enemyunits[enemyat].ypos + "), <b>who was destroyed</b> after receiving " + damage + " damage.");
+                document.querySelectorAll("[data-enemyunit='" + enemyat + "']")[0].innerHTML = "";
+                document.querySelectorAll("[data-enemyunit='" + enemyat + "']")[0].className = "cell-unknown";
+                delete document.querySelectorAll("[data-enemyunit='" + enemyat + "']")[0].dataset.enemyunit;
+                enemyunits[enemyat] = new Unit("Dead", 0, 0, "none", 0, 0);
+                updateCells();
+                var eliminated = true;
+                for (var i = 0; i < enemyunits.length; i++) {
+                    if (enemyunits[i].hp !== 0) {
+                        eliminated = false;
+                        break;
+                    };
+                };
+                if (eliminated) {
+                    battle = false;
+                    turn = null;
+                    pushMsg("<b>You won the battle!</b>");
+                    return false;
+                } else {
+                    actions++;
+                    postAction();
+                    return false;
+                };
+            } else {
+                pushMsg("Player " + unitDesc[units[curCell.dataset.unit - 1].type].name + " (" + units[curCell.dataset.unit - 1].xpos + ", " + units[curCell.dataset.unit - 1].ypos + ") fired at Enemy " + unitDesc[enemyunits[enemyat].type].name + " (" + enemyunits[enemyat].xpos + ", " + enemyunits[enemyat].ypos + ") and dealt " + damage + " damage. Enemy " + unitDesc[enemyunits[enemyat].type].name + "'s HP is now " + enemyunits[enemyat].hp + ".");
+                actions++;
+                postAction();
+                return false;
+            };
+        };
+    };
+    if (Math.abs(params[1]) > unitDesc[curType].speed) {
+        if (params[1] > 0) {
+            xmove = unitDesc[curType].speed;
+        } else if (params[1] < 0) {
+            xmove = -1 * unitDesc[curType].speed;
+        };
+    } else {
+        if (params[1] > 0) {
+            xmove = Math.floor(params[1]);
+        } else if (params[1] < 0) {
+            xmove = Math.ceil(params[1]);
+        } else {
+            xmove = 0;
+        };
+    };
+    if (Math.abs(params[2]) > unitDesc[curType].speed) {
+        if (params[2] > 0) {
+            ymove = unitDesc[curType].speed;
+        } else if (params[2] < 0) {
+            ymove = -1 * unitDesc[curType].speed;
+        };
+    } else {
+        if (params[2] > 0) {
+            ymove = Math.floor(params[2]);
+        } else if (params[2] < 0) {
+            ymove = Math.ceil(params[2]);
+        };
+    };
+    if (getCell(Number(y) + ymove, Number(x) + xmove) == undefined) {
+        pushMsg("Faulty order!");
+        actions++;
+        postAction();
+        return false;
+    };
+    if (getCell(Number(y) + ymove, Number(x) + xmove).innerHTML !== "") {
+        pushMsg("Faulty order!");
+        actions++;
+        postAction();
+        return false;
+    };
+    curCell.innerHTML = "";
+    curCell.className = "cell-unknown";
+    getCell((Number(y) + ymove), (Number(x) + xmove)).innerHTML = units[curCell.dataset.unit - 1].type;
+    getCell((Number(y) + ymove), (Number(x) + xmove)).dataset.unit = curCell.dataset.unit;
+    units[curCell.dataset.unit - 1].xpos = (Number(x) + xmove);
+    units[curCell.dataset.unit - 1].ypos = (Number(y) + ymove);
+    delete curCell.dataset.unit;
+    updateCells();
+    pushMsg(unitDesc[getCell(Number(y) + ymove, Number(x) + xmove).innerHTML].name + " was moved from " + x + ", " + y + " to " + (Number(x) + xmove) + ", " + (Number(y) + ymove) + ".");
+    actions++;
+    postAction();
 };
 
 function clear() {
@@ -205,7 +225,7 @@ function clear() {
 };
 
 function info() {
-	pushMsg("Online Combat Simulator (OCS) v1.1<br>Created by Jack Rong<br><br>Changelog:<br><span style = 'text-decoration:underline'>1.1 (indev)</span>- Visual improvements, messages now show unit coordinates, improved vision system, added /unitstat and /queryhp<br><span style = 'text-decoration:underline'>1.0 (3/10/17)</span>- Initial relase");
+	pushMsg("Online Combat Simulator (OCS) v1.2<br>Created by Jack Rong<br><br>Changelog:<br><span style = 'text-decoration:underline'>1.2 (3/16/17)</span>- levels and /level, up/down key recent command scrolling, slightly improved hit/miss system, /firsttime and version detection<span style = 'text-decoration:underline'>1.1 (3/11/17)</span>- Visual improvements, messages now show unit coordinates, improved vision system, added /unitstat and /queryhp<br><span style = 'text-decoration:underline'>1.0 (3/10/17)</span>- Initial relase");
 };
 
 function unitstat(params) {
@@ -257,6 +277,397 @@ function queryhp(params) {
 	};
 };
 
+function level(params) {
+	if (params[0].length == 0) {
+		pushMsg("Missing required parameter.");
+		return false;
+	};
+	if (battle) {
+		pushMsg("Finish the battle first!");
+		return false;
+	};
+	if (Number(params[0]) < 1 || Number(params[0]) > 10) {
+		pushMsg("Select a level between 1 and 9.");
+		 return false;
+	};
+	if (params[1]) {
+		if (Number(params[1]) < 1 || Number(params[1]) > 10) {
+			pushMsg("Select a level between 1 and 10.");
+			return false;
+		};
+	};
+	var allcells = document.querySelectorAll("#playing-field > div > div");
+	var alllength = allcells.length;
+	for (var i = 0; i < alllength; i++) {
+		allcells[i].innerHTML = "";
+		delete allcells[i].dataset.unit;
+		allcells[i].className = "cell-unknown";
+	};
+	var enemies = document.querySelectorAll(".cell-enemy");
+	for (var i = 0; i < enemies.length; i++) {
+		enemies[i].className = "cell-unknown";
+	};
+	if (!params[1]) {
+		playerlvl = Number(params[0]);
+		enemylvl = Number(params[0]);
+		pushMsg("Level switched to " + params[0] + " for both sides.");
+		var config = levels[playerlvl - 1];
+		config.reverse();
+		units = [];
+		enemyunits = [];
+		if (config.length == 4) {
+			units[0] = new Unit(config[0], 1);
+			getCell(1, 1).innerHTML = config[0];
+			getCell(1, 1).className = "cell-discovered";
+			getCell(1, 1).dataset.unit = 1;
+			units[1] = new Unit(config[1], 1);
+			getCell(1, 2).innerHTML = config[1];
+			getCell(1, 2).className = "cell-discovered";
+			getCell(1, 2).dataset.unit = 2;
+			units[2] = new Unit(config[2], 1);
+			getCell(2, 1).innerHTML = config[2];
+			getCell(2, 1).className = "cell-discovered";
+			getCell(2, 1).dataset.unit = 3;
+			units[3] = new Unit(config[3], 1);
+			getCell(2, 2).innerHTML = config[3];
+			getCell(2, 2).className = "cell-discovered";
+			getCell(2, 2).dataset.unit = 4;
+			units[0].xpos = 1;
+			units[0].ypos = 1;
+			units[1].xpos = 2;
+			units[1].ypos = 1;
+			units[2].xpos = 1;
+			units[2].ypos = 2;
+			units[3].xpos = 2;
+			units[3].ypos = 2;
+			updateCells();
+			config.reverse();
+			enemyunits[0] = new Unit(config[0], 1);
+			getCell(9, 15).className = "cell-enemy";
+			getCell(9, 15).dataset.enemyunit = 1;
+			enemyunits[1] = new Unit(config[1], 1);
+			getCell(9, 16).className = "cell-enemy";
+			getCell(9, 16).dataset.enemyunit = 2;
+			enemyunits[2] = new Unit(config[2], 1);
+			getCell(10, 15).className = "cell-enemy";
+			getCell(10, 15).dataset.enemyunit = 3;
+			enemyunits[3] = new Unit(config[3], 1);
+			getCell(10, 16).className = "cell-enemy";
+			getCell(10, 16).dataset.enemyunit = 4;
+			enemyunits[0].xpos = 15;
+			enemyunits[0].ypos = 9;
+			enemyunits[1].xpos = 16;
+			enemyunits[1].ypos = 9;
+			enemyunits[2].xpos = 15;
+			enemyunits[2].ypos = 10;
+			enemyunits[3].xpos = 16;
+			enemyunits[3].ypos = 10;
+		} else {
+			units[0] = new Unit(config[0], 1);
+			getCell(1, 1).innerHTML = config[0];
+			getCell(1, 1).className = "cell-discovered";
+			getCell(1, 1).dataset.unit = 1;
+			units[1] = new Unit(config[1], 1);
+			getCell(1, 2).innerHTML = config[1];
+			getCell(1, 2).className = "cell-discovered";
+			getCell(1, 2).dataset.unit = 2;
+			units[2] = new Unit(config[2], 1);
+			getCell(1, 3).innerHTML = config[2];
+			getCell(1, 3).className = "cell-discovered";
+			getCell(1, 3).dataset.unit = 3;
+			units[3] = new Unit(config[3], 1);
+			getCell(2, 1).innerHTML = config[3];
+			getCell(2, 1).className = "cell-discovered";
+			getCell(2, 1).dataset.unit = 4;
+			units[4] = new Unit(config[4], 1);
+			getCell(2, 2).innerHTML = config[4];
+			getCell(2, 2).className = "cell-discovered";
+			getCell(2, 2).dataset.unit = 5;
+			units[5] = new Unit(config[5], 1);
+			getCell(2, 3).innerHTML = config[5];
+			getCell(2, 3).className = "cell-discovered";
+			getCell(2, 3).dataset.unit = 6;
+			units[6] = new Unit(config[6], 1);
+			getCell(3, 1).innerHTML = config[6];
+			getCell(3, 1).className = "cell-discovered";
+			getCell(3, 1).dataset.unit = 7;
+			units[7] = new Unit(config[7], 1);
+			getCell(3, 2).innerHTML = config[7];
+			getCell(3, 2).className = "cell-discovered";
+			getCell(3, 2).dataset.unit = 8;
+			units[8] = new Unit(config[8], 1);
+			getCell(3, 3).innerHTML = config[8];
+			getCell(3, 3).className = "cell-discovered";
+			getCell(3, 3).dataset.unit = 9;
+			updateCells();
+			units[0].xpos = 1;
+			units[0].ypos = 1;
+			units[1].xpos = 2;
+			units[1].ypos = 1;
+			units[2].xpos = 3;
+			units[2].ypos = 1;
+			units[3].xpos = 1;
+			units[3].ypos = 2;
+			units[4].xpos = 2;
+			units[4].ypos = 2;
+			units[5].xpos = 3;
+			units[5].ypos = 2;
+			units[6].xpos = 1;
+			units[6].ypos = 3;
+			units[7].xpos = 2;
+			units[7].ypos = 3;
+			units[8].xpos = 3;
+			units[8].ypos = 3;
+			config.reverse();
+			enemyunits[0] = new Unit(config[0], 1);
+			getCell(8, 14).className = "cell-enemy";
+			getCell(8, 14).dataset.enemyunit = 1;
+			enemyunits[1] = new Unit(config[1], 1);
+			getCell(8, 15).className = "cell-enemy";
+			getCell(8, 15).dataset.enemyunit = 2;
+			enemyunits[2] = new Unit(config[2], 1);
+			getCell(8, 16).className = "cell-enemy";
+			getCell(8, 16).dataset.enemyunit = 3;
+			enemyunits[3] = new Unit(config[3], 1);
+			getCell(9, 14).className = "cell-enemy";
+			getCell(9, 14).dataset.enemyunit = 4;
+			enemyunits[4] = new Unit(config[4], 1);
+			getCell(9, 15).className = "cell-enemy";
+			getCell(9, 15).dataset.enemyunit = 5;
+			enemyunits[5] = new Unit(config[5], 1);
+			getCell(9, 16).className = "cell-enemy";
+			getCell(9, 16).dataset.enemyunit = 6;
+			enemyunits[6] = new Unit(config[6], 1);
+			getCell(10, 14).className = "cell-enemy";
+			getCell(10, 14).dataset.enemyunit = 7;
+			enemyunits[7] = new Unit(config[7], 1);
+			getCell(10, 15).className = "cell-enemy";
+			getCell(10, 15).dataset.enemyunit = 8;
+			enemyunits[8] = new Unit(config[8], 1);
+			getCell(10, 16).className = "cell-enemy";
+			getCell(10, 16).dataset.enemyunit = 9;
+			enemyunits[0].xpos = 14;
+			enemyunits[0].ypos = 8;
+			enemyunits[1].xpos = 15;
+			enemyunits[1].ypos = 8;
+			enemyunits[2].xpos = 16;
+			enemyunits[2].ypos = 8;
+			enemyunits[3].xpos = 14;
+			enemyunits[3].ypos = 9;
+			enemyunits[4].xpos = 15;
+			enemyunits[4].ypos = 9;
+			enemyunits[5].xpos = 16;
+			enemyunits[5].ypos = 9;
+			enemyunits[6].xpos = 14;
+			enemyunits[6].ypos = 10;
+			enemyunits[7].xpos = 15;
+			enemyunits[7].ypos = 10;
+			enemyunits[8].xpos = 16;
+			enemyunits[8].ypos = 10;
+		};
+	} else {
+		playerlvl = Number(params[0]);
+		pushMsg("Player level switched to " + params[0] + ".");
+		var config = levels[playerlvl - 1];
+		config.reverse();
+		units = [];
+		enemyunits = [];
+		if (config.length == 4) {
+			units[0] = new Unit(config[0], 1);
+			getCell(1, 1).innerHTML = config[0];
+			getCell(1, 1).className = "cell-discovered";
+			getCell(1, 1).dataset.unit = 1;
+			units[1] = new Unit(config[1], 1);
+			getCell(1, 2).innerHTML = config[1];
+			getCell(1, 2).className = "cell-discovered";
+			getCell(1, 2).dataset.unit = 2;
+			units[2] = new Unit(config[2], 1);
+			getCell(2, 1).innerHTML = config[2];
+			getCell(2, 1).className = "cell-discovered";
+			getCell(2, 1).dataset.unit = 3;
+			units[3] = new Unit(config[3], 1);
+			getCell(2, 2).innerHTML = config[3];
+			getCell(2, 2).className = "cell-discovered";
+			getCell(2, 2).dataset.unit = 4;
+			units[0].xpos = 1;
+			units[0].ypos = 1;
+			units[1].xpos = 2;
+			units[1].ypos = 1;
+			units[2].xpos = 1;
+			units[2].ypos = 2;
+			units[3].xpos = 2;
+			units[3].ypos = 2;
+		} else {
+			units[0] = new Unit(config[0], 1);
+			getCell(1, 1).innerHTML = config[0];
+			getCell(1, 1).className = "cell-discovered";
+			getCell(1, 1).dataset.unit = 1;
+			units[1] = new Unit(config[1], 1);
+			getCell(1, 2).innerHTML = config[1];
+			getCell(1, 2).className = "cell-discovered";
+			getCell(1, 2).dataset.unit = 2;
+			units[2] = new Unit(config[2], 1);
+			getCell(1, 3).innerHTML = config[2];
+			getCell(1, 3).className = "cell-discovered";
+			getCell(1, 3).dataset.unit = 3;
+			units[3] = new Unit(config[3], 1);
+			getCell(2, 1).innerHTML = config[3];
+			getCell(2, 1).className = "cell-discovered";
+			getCell(2, 1).dataset.unit = 4;
+			units[4] = new Unit(config[4], 1);
+			getCell(2, 2).innerHTML = config[4];
+			getCell(2, 2).className = "cell-discovered";
+			getCell(2, 2).dataset.unit = 5;
+			units[5] = new Unit(config[5], 1);
+			getCell(2, 3).innerHTML = config[5];
+			getCell(2, 3).className = "cell-discovered";
+			getCell(2, 3).dataset.unit = 6;
+			units[6] = new Unit(config[6], 1);
+			getCell(3, 1).innerHTML = config[6];
+			getCell(3, 1).className = "cell-discovered";
+			getCell(3, 1).dataset.unit = 7;
+			units[7] = new Unit(config[7], 1);
+			getCell(3, 2).innerHTML = config[7];
+			getCell(3, 2).className = "cell-discovered";
+			getCell(3, 2).dataset.unit = 8;
+			units[8] = new Unit(config[8], 1);
+			getCell(3, 3).innerHTML = config[8];
+			getCell(3, 3).className = "cell-discovered";
+			getCell(3, 3).dataset.unit = 9;
+			units[0].xpos = 1;
+			units[0].ypos = 1;
+			units[1].xpos = 2;
+			units[1].ypos = 1;
+			units[2].xpos = 3;
+			units[2].ypos = 1;
+			units[3].xpos = 1;
+			units[3].ypos = 2;
+			units[4].xpos = 2;
+			units[4].ypos = 2;
+			units[5].xpos = 3;
+			units[5].ypos = 2;
+			units[6].xpos = 1;
+			units[6].ypos = 3;
+			units[7].xpos = 2;
+			units[7].ypos = 3;
+			units[8].xpos = 3;
+			units[8].ypos = 3;
+		};
+		config.reverse();
+		updateCells();
+		enemylvl = Number(params[1]);
+		pushMsg("Enemy level switched to " + enemylvl + ".");
+		var enemyconfig = levels[enemylvl - 1];
+		if (enemyconfig.length == 4) {
+			enemyunits[0] = new Unit(enemyconfig[0], 1);
+			getCell(9, 15).className = "cell-enemy";
+			getCell(9, 15).dataset.enemyunit = 1;
+			enemyunits[1] = new Unit(enemyconfig[1], 1);
+			getCell(9, 16).className = "cell-enemy";
+			getCell(9, 16).dataset.enemyunit = 2;
+			enemyunits[2] = new Unit(enemyconfig[2], 1);
+			getCell(10, 15).className = "cell-enemy";
+			getCell(10, 15).dataset.enemyunit = 3;
+			enemyunits[3] = new Unit(enemyconfig[3], 1);
+			getCell(10, 16).className = "cell-enemy";
+			getCell(10, 16).dataset.enemyunit = 4;
+			enemyunits[0].xpos = 15;
+			enemyunits[0].ypos = 9;
+			enemyunits[1].xpos = 16;
+			enemyunits[1].ypos = 9;
+			enemyunits[2].xpos = 15;
+			enemyunits[2].ypos = 10;
+			enemyunits[3].xpos = 16;
+			enemyunits[3].ypos = 10;
+		} else {
+			enemyunits[0] = new Unit(enemyconfig[0], 1);
+			getCell(8, 14).className = "cell-enemy";
+			getCell(8, 14).dataset.enemyunit = 1;
+			enemyunits[1] = new Unit(enemyconfig[1], 1);
+			getCell(8, 15).className = "cell-enemy";
+			getCell(8, 15).dataset.enemyunit = 2;
+			enemyunits[2] = new Unit(enemyconfig[2], 1);
+			getCell(8, 16).className = "cell-enemy";
+			getCell(8, 16).dataset.enemyunit = 3;
+			enemyunits[3] = new Unit(enemyconfig[3], 1);
+			getCell(9, 14).className = "cell-enemy";
+			getCell(9, 14).dataset.enemyunit = 4;
+			enemyunits[4] = new Unit(enemyconfig[4], 1);
+			getCell(9, 15).className = "cell-enemy";
+			getCell(9, 15).dataset.enemyunit = 5;
+			enemyunits[5] = new Unit(enemyconfig[5], 1);
+			getCell(9, 16).className = "cell-enemy";
+			getCell(9, 16).dataset.enemyunit = 6;
+			enemyunits[6] = new Unit(enemyconfig[6], 1);
+			getCell(10, 14).className = "cell-enemy";
+			getCell(10, 14).dataset.enemyunit = 7;
+			enemyunits[7] = new Unit(enemyconfig[7], 1);
+			getCell(10, 15).className = "cell-enemy";
+			getCell(10, 15).dataset.enemyunit = 8;
+			enemyunits[8] = new Unit(enemyconfig[8], 1);
+			getCell(10, 16).className = "cell-enemy";
+			getCell(10, 16).dataset.enemyunit = 9;
+			enemyunits[0].xpos = 14;
+			enemyunits[0].ypos = 8;
+			enemyunits[1].xpos = 15;
+			enemyunits[1].ypos = 8;
+			enemyunits[2].xpos = 16;
+			enemyunits[2].ypos = 8;
+			enemyunits[3].xpos = 14;
+			enemyunits[3].ypos = 9;
+			enemyunits[4].xpos = 15;
+			enemyunits[4].ypos = 9;
+			enemyunits[5].xpos = 16;
+			enemyunits[5].ypos = 9;
+			enemyunits[6].xpos = 14;
+			enemyunits[6].ypos = 10;
+			enemyunits[7].xpos = 15;
+			enemyunits[7].ypos = 10;
+			enemyunits[8].xpos = 16;
+			enemyunits[8].ypos = 10;
+		};
+	};
+};
+
+function objective() {
+	if (!battle) {
+		pushMsg("This command can only be used while in battle.");
+		return false;
+	};
+	var roster = {
+		"I": 0,
+		"O": 0,
+		"C": 0,
+		"T": 0,
+		"M": 0,
+		"S": 0,
+		"A": 0,
+		"W": 0,
+		"N": 0
+	};
+	var total = 0;
+	var dead = 0;
+	var rostertxt = "";
+	for (var i = 0; i < enemyunits.length; i++) {
+		if (enemyunits[i].type == "Dead") {
+			dead++;
+		} else {
+			roster[enemyunits[i].type]++;
+			total++;
+		};
+	};
+	for (var i in roster) {
+		if (roster[i] !== 0) {
+			rostertxt += (roster[i] + " " + unitDesc[i].name + " ");
+		};
+	};
+	pushMsg("You have destroyed " + dead + " of the enemy's " + (total + dead) + " troops, which means that there are " + total + " remaining. These troops are " + rostertxt.substring(0, rostertxt.length - 1) + ".");
+};
+
+function firsttime() {
+	pushMsg("To start a battle, type in /begin in the command box below. This will begin a battle with the AI, whose level you can change with the /level command. The /level command can also be used to set your level.<br><br>After beginning a battle, the battlefield's cells will change color to represent different things. Green cells mean that they have been discovered and are in sight of one of your units, blue cells cannot be seen, and red cells represent enemy units. A letter will be used to symbolize units standing in a cell (for example, I for Infantry). You can get a list of all units via /unitstat. Each cell has a coordinate assigned to it, from 1-1 at the bottom-left to 16-10 at the top-right. The first number represents the x-value, and the second number represents the y-value. These values must be separated by a dash. The entire battlefield is 16 cells wide and 10 cells tall.<br><br>The /attack command is the most commonly used one during battle. Its syntax is this: /attack [position] [stepsx] [stepsy], and if its syntax is entered improperly, your turn will be skipped, so be careful! The position parameter represents the position of the unit that will be attacking. The stepsx and stepsy parameters represent which cell to target. The targeted cell is calculated relative to the unit's position, so if stepsx is 1 and stepsy is -1, the targeted cell will be 1 cell to the right and 1 cell below the attacking unit. If the targeted cell is empty, the unit will attempt to move to that cell provided that it exists and is in the unit's reach (speed). If the targeted cell is occupied by an enemy unit, the unit will fire at the enemy unit provided the enemy unit is visible (vision). The damage dealt is calculated using the unit's many statistics including speed, defense, accuracy, and more. You cannot move units on top of your own units.<br><br>The goal of the game is to destroy all enemy units before you are destroyed. You can get a list of other helpful commands and how to use them by using /help. Good luck, and have fun!");
+};
+
 // Define helper functions/objects
 
 function pushMsg(msg) {
@@ -268,7 +679,9 @@ String.prototype.toNormalCase = function() {
     return this.charAt(0).toUpperCase() + this.slice(1);
 }
 
-var commands = ["help", "begin", "attack", "clear", "info", "unitstat", "queryhp"];
+var commands = ["help", "begin", "attack", "clear", "info", "level", "unitstat", "queryhp", "objective", "firsttime"];
+var lastcommand = "";
+
 function execCmd(event) {
 	if (event.keyCode == 13) {
 		var cmd = document.querySelectorAll("#action-center > input")[0].value;
@@ -293,7 +706,13 @@ function execCmd(event) {
 			pushMsg("Error: No such command " + cmdName.toNormalCase());
 		} else {
 			window[cmdName](params.split(" "));
-		}
+		};
+		lastcommand = document.querySelectorAll("#action-center > input")[0].value;
+		document.querySelectorAll("#action-center > input")[0].value = "";
+	} else if (event.keyCode == 38) {
+		document.querySelectorAll("#action-center > input")[0].value = lastcommand;
+		setTimeout(function() { document.querySelectorAll("#action-center > input")[0].selectionStart = document.querySelectorAll("#action-center > input")[0].selectionEnd = 10000; }, 0);
+	} else if (event.keyCode == 40) {
 		document.querySelectorAll("#action-center > input")[0].value = "";
 	};
 };
@@ -307,13 +726,17 @@ var unitDesc = {
 	"O": {strength: 3, def: 2, vision: 2, speed: 2, hp: 20, accuracy: 0.8, name: "Officer"},
 	"C": {strength: 4, def: 3, vision: 2, speed: 3, hp: 25, accuracy: 0.75, name: "Cavalry"},
 	"T": {strength: 5, def: 3, vision: 2, speed: 1, hp: 35, accuracy: 0.75, name: "Tank"},
-	"M": {strength: 4, def: 2, vision: 7, speed: 1, hp: 10, accuracy: 0.85, name: "Mortar"},
+	"M": {strength: 5, def: 2, vision: 7, speed: 1, hp: 10, accuracy: 0.85, name: "Mortar"},
 	"S": {strength: 2, def: 1, vision: 3, speed: 3, hp: 20, accuracy: 0.65, name: "Scout"},
 	"A": {strength: 7, def: 7, vision: 5, speed: 4, hp: 45, accuracy: 0.85, name: "Airplane"},
 	"W": {strength: 10, def: 8, vision: 3, speed: 3, hp: 45, accuracy: 0.85, name: "Warhead"},
 	"N": {strength: 20, def: 2, vision: 3, speed: 4, hp: 20, accuracy: 1, name: "Nuclear Bomber"},
 	"Dead": {strength: 0, def: 0, vision: 0, speed: 0, hp: 0, accuracy: 0, name: "Dead"}
 };
+
+var levels = [["I", "I", "I", "I"], ["O", "I", "I", "I"], ["I", "I", "I", "I", "I", "I", "I", "I", "I"], ["O", "I", "C", "I", "I", "I", "C", "I", "I"], ["T", "T", "T", "T"], ["O", "T", "T", "T", "C", "C", "T", "C", "M"], ["O", "T", "T", "T", "S", "M", "T", "M", "S"], ["O", "A", "A", "A"], ["O", "W", "T", "W", "A", "A", "T", "A", "A"], ["O", "W", "T", "W", "W", "A", "T", "A", "N"]];
+var playerlvl = 1;
+var enemylvl = 1;
 
 function Unit(type, lvl, hp, side, xpos, ypos) {
 	this.type = type;
@@ -351,7 +774,7 @@ function updateCells() {
 			if (curCell !== undefined) {
 				vision = curCell.vision;
 			};
-			if (getCell(i, j).dataset.unit) {
+			if (getCell(i, j).dataset.unit && getCell(i, j).innerHTML !== "") {
 				if (units[getCell(i, j).dataset.unit - 1].hp <= (unitDesc[getCell(i, j).innerHTML].hp / 2)) {
 					getCell(i, j).style.color = "#920606";
 				};
@@ -366,7 +789,7 @@ function updateCells() {
 			};
 			for (var k = 0; k < discoveredCells.length; k++) {
 				if (!((discoveredCells[k])[0] <= 0 || (discoveredCells[k])[1] <= 0)) {
-					if (getCell((discoveredCells[k])[0],(discoveredCells[k])[1])) {
+					if (getCell((discoveredCells[k])[0], (discoveredCells[k])[1])) {
 						var isenemy = false;
 						for (var l = 0; l < enemyunits.length; l++) {
 							if (enemyunits[l].xpos == (discoveredCells[k])[1] && enemyunits[l].ypos == (discoveredCells[k])[0]) {
@@ -375,14 +798,14 @@ function updateCells() {
 							};
 						};
 						if (isenemy !== false) {
-							getCell((discoveredCells[k])[0],(discoveredCells[k])[1]).className = "cell-enemy";
-							getCell((discoveredCells[k])[0],(discoveredCells[k])[1]).innerHTML = enemyunits[isenemy].type;
-							getCell((discoveredCells[k])[0],(discoveredCells[k])[1]).dataset.enemyunit = isenemy;
+							getCell((discoveredCells[k])[0], (discoveredCells[k])[1]).className = "cell-enemy";
+							getCell((discoveredCells[k])[0], (discoveredCells[k])[1]).innerHTML = enemyunits[isenemy].type;
+							getCell((discoveredCells[k])[0], (discoveredCells[k])[1]).dataset.enemyunit = isenemy;
 							if (enemyunits[isenemy].hp <= (unitDesc[enemyunits[isenemy].type].hp / 2)) {
 								getCell((discoveredCells[k])[0],(discoveredCells[k])[1]).style.color = "#920606";
 							};
 						} else {
-							getCell((discoveredCells[k])[0],(discoveredCells[k])[1]).className = "cell-discovered";
+							getCell((discoveredCells[k])[0], (discoveredCells[k])[1]).className = "cell-discovered";
 						};
 					};
 				};
@@ -398,6 +821,12 @@ function checkEnemyCell(col, row) {
 	};
 	for (var i = 0; i < enemyunits.length; i++) {
 		if (enemyunits[i].xpos == col && enemyunits[i].ypos == row) {
+			violated = true;
+			break;
+		};
+	};
+	for (var i = 0; i < units.length; i++) {
+		if (units[i].xpos == col && units[i].ypos == row) {
 			violated = true;
 			break;
 		};
@@ -426,27 +855,27 @@ function enemyTurn(times) {
 	if (spotted.length !== 0) {
 		var greatest = 0;
 		for (var i = 0; i < spotted.length; i++) {
-			if ([(spotted[i])[0].type].strength > greatest) {
+			if (unitDesc[(spotted[i])[0].type].strength > greatest) {
 				greatest = i;
 			};
 		};
 		var crit = Math.random();
 		var multiplier;
-		if (crit < 0.35) {
+		if (crit < 0.2) {
 			multiplier = (Math.random() * 0.5) + 0.5;
-		} else if (crit >= 0.35 && crit < 0.85) {
+		} else if (crit >= 0.2 && crit < 0.85) {
 			multiplier = (Math.random() * 1.6) + 1;
 		} else {
 			multiplier = (Math.random() * 1.2) + 2.6;
 		};
-		var defense = (Math.random() * (unitDesc[(spotted[greatest])[1].type].speed * 1.5 - unitDesc[(spotted[greatest])[1].type].speed * 0.5) + unitDesc[(spotted[greatest])[1].type].speed * 0.5);
+		var defense = (Math.random() * (unitDesc[(spotted[greatest])[1].type].speed * 1.5 - unitDesc[(spotted[greatest])[1].type].speed * 0.5) + unitDesc[(spotted[greatest])[1].type].speed * 0.5) * (Math.random() * 2) + 0.75;
 		var damage = ((unitDesc[(spotted[greatest])[0].type].strength * multiplier) - (unitDesc[(spotted[greatest])[1].type].def * defense)).toFixed(2);
-		if (Math.random() + (unitDesc[(spotted[greatest])[1].type].speed * (Math.random() * 0.1)) > unitDesc[(spotted[greatest])[0].type].accuracy || damage <= 0) {
-			pushMsg("Enemy " + unitDesc[(spotted[greatest])[0].type].name + " (" + enemyunits[(spotted[greatest])[3]].xpos + ", " + enemyunits[(spotted[greatest])[3]].ypos + ") spotted Player " + unitDesc[(spotted[greatest])[1].type].name + " (" + units[(spotted[greatest])[2]].xpos + ", " + units[(spotted[greatest])[2]].ypos + ") and tried to fire, but missed.");
+		if (Math.random() + ((unitDesc[(spotted[greatest])[1].type].speed / 2) * (Math.random() - 9)) > unitDesc[(spotted[greatest])[0].type].accuracy || damage <= 0) {
+			pushMsg("Enemy " + unitDesc[(spotted[greatest])[0].type].name + " spotted Player " + unitDesc[(spotted[greatest])[1].type].name + " (" + units[(spotted[greatest])[2]].xpos + ", " + units[(spotted[greatest])[2]].ypos + ") and tried to fire, but missed.");
 		} else {
 			units[(spotted[greatest])[2]].hp = (units[(spotted[greatest])[2]].hp - damage).toFixed(2);
 			if (units[(spotted[greatest])[2]].hp <= 0) {
-				pushMsg("Enemy " + unitDesc[(spotted[greatest])[0].type].name + " (" + enemyunits[(spotted[greatest])[3]].xpos + ", " + enemyunits[(spotted[greatest])[3]].ypos + ") fired at Player " + unitDesc[(spotted[greatest])[1].type].name + " (" + units[(spotted[greatest])[2]].xpos + ", " + units[(spotted[greatest])[2]].ypos + "), <b>who was destroyed</b> after receiving " + damage + " damage.");
+				pushMsg("Enemy " + unitDesc[(spotted[greatest])[0].type].name + " fired at Player " + unitDesc[(spotted[greatest])[1].type].name + " (" + units[(spotted[greatest])[2]].xpos + ", " + units[(spotted[greatest])[2]].ypos + "), <b>who was destroyed</b> after receiving " + damage + " damage.");
 				document.querySelectorAll("[data-unit='" + ((spotted[greatest])[2] + 1) + "']")[0].innerHTML = "";
 				delete document.querySelectorAll("[data-unit='" + ((spotted[greatest])[2] + 1) + "']")[0].dataset.unit;
 				units[(spotted[greatest])[2]] = new Unit("Dead", 0, 0, "none", 0, 0);
@@ -463,13 +892,15 @@ function enemyTurn(times) {
 					turn = null;
 					pushMsg("<b>The enemies won the battle!</b>");
 					for (var j = 0; j < enemyunits.length; j++) {
-						getCell(enemyunits[j].ypos, enemyunits[j].xpos).className = "cell-enemy";
-						getCell(enemyunits[j].ypos, enemyunits[j].xpos).innerHTML = enemyunits[j].type;
+						if (enemyunits[j].type !== "Dead") {
+							getCell(enemyunits[j].ypos, enemyunits[j].xpos).className = "cell-enemy";
+							getCell(enemyunits[j].ypos, enemyunits[j].xpos).innerHTML = enemyunits[j].type;
+						};
 					};
 					return false;
 				};
 			} else {
-				pushMsg("Enemy " + unitDesc[(spotted[greatest])[0].type].name + " (" + enemyunits[(spotted[greatest])[3]].xpos + ", " + enemyunits[(spotted[greatest])[3]].ypos + ") spotted Player " + unitDesc[(spotted[greatest])[1].type].name + " (" + units[(spotted[greatest])[2]].xpos + ", " + units[(spotted[greatest])[2]].ypos + ") and dealt " + damage + " damage. Player " + unitDesc[(spotted[greatest])[1].type].name + "'s HP is now " + units[(spotted[greatest])[2]].hp + ".");
+				pushMsg("Enemy " + unitDesc[(spotted[greatest])[0].type].name + " fired at Player " + unitDesc[(spotted[greatest])[1].type].name + " (" + units[(spotted[greatest])[2]].xpos + ", " + units[(spotted[greatest])[2]].ypos + ") and dealt " + damage + " damage. Player " + unitDesc[(spotted[greatest])[1].type].name + "'s HP is now " + units[(spotted[greatest])[2]].hp + ".");
 			};
 		};
 		playerTurn();
@@ -555,99 +986,79 @@ function playerTurn() {
 
 // Initialize playing field + grid
 
-for (var i = 0; i < 10; i++) {
+for (var a = 0; a < 10; a++) {
 	var sixteencells = "";
-	for (var j = 0; j < 16; j++) {
-		sixteencells += "<div class = 'cell-unknown' id = 'cell-" + (10 - i) + "-" + (j + 1) + "'></div>";
+	for (var b = 0; b < 16; b++) {
+		sixteencells += "<div class = 'cell-unknown' id = 'cell-" + (10 - a) + "-" + (b + 1) + "'></div>";
 	};
-	document.getElementById("playing-field").innerHTML += "<div id = 'row-" + (10 - i) + "'>" + sixteencells + "</div>";
+	document.getElementById("playing-field").innerHTML += "<div id = 'row-" + (10 - a) + "'>" + sixteencells + "</div>";
 };
 
-var startPos = [new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1), new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1), new Unit("I", 1, 20), new Unit("O", 1)];
-var rowsCovered = 1;
-for (var i = 1; i <= 9; i++) {
-	if (i == 3 || i == 6 || i == 9) {
-		getCell(rowsCovered, (i / rowsCovered)).innerHTML = startPos[i - 1].type;
-		getCell(rowsCovered, (i / rowsCovered)).className = "cell-discovered";
-		getCell(rowsCovered, (i / rowsCovered)).dataset.unit = i;
-		units[units.length] = startPos[i - 1];
-		units[units.length - 1].xpos = i / rowsCovered;
-		units[units.length - 1].ypos = rowsCovered;
-		rowsCovered++;
-	} else {
-		getCell(rowsCovered, (i % 3)).innerHTML = startPos[i - 1].type;
-		getCell(rowsCovered, (i % 3)).className = "cell-discovered";
-		getCell(rowsCovered, (i % 3)).dataset.unit = i;
-		units[units.length] = startPos[i-1];
-		units[units.length - 1].xpos = i % 3;
-		units[units.length - 1].ypos = rowsCovered;
-	};
-};
-var enemyPos = [new Unit("I", 1, 20, "enemy"), new Unit("I", 1, 20, "enemy"), new Unit("I", 1, 20, "enemy"), new Unit("I", 1, 20, "enemy")];
-if (enemyPos.length == 4) {
-	getCell(9, 15).className = "cell-enemy";
-	getCell(9, 16).className = "cell-enemy";
-	getCell(10, 15).className = "cell-enemy";
-	getCell(10, 16).className = "cell-enemy";
-	enemyunits[0] = enemyPos[0];
-	enemyunits[0].xpos = 15;
-	enemyunits[0].ypos = 9;
-	enemyunits[1] = enemyPos[1];
-	enemyunits[1].xpos = 16;
-	enemyunits[1].ypos = 9;
-	enemyunits[2] = enemyPos[2];
-	enemyunits[2].xpos = 15;
-	enemyunits[2].ypos = 10;
-	enemyunits[3] = enemyPos[3];
-	enemyunits[3].xpos = 16;
-	enemyunits[3].ypos = 10;
-} else {
-	getCell(8, 14).className = "cell-enemy";
-	getCell(8, 15).className = "cell-enemy";
-	getCell(8, 16).className = "cell-enemy";
-	getCell(9, 14).className = "cell-enemy";
-	getCell(9, 15).className = "cell-enemy";
-	getCell(9, 16).className = "cell-enemy";
-	getCell(10, 14).className = "cell-enemy";
-	getCell(10, 15).className = "cell-enemy";
-	getCell(10, 16).className = "cell-enemy";
-	enemyunits[0] = enemyPos[0];
-	enemyunits[0].xpos = 14;
-	enemyunits[0].ypos = 8;
-	enemyunits[1] = enemyPos[1];
-	enemyunits[1].xpos = 15;
-	enemyunits[1].ypos = 8;
-	enemyunits[2] = enemyPos[2];
-	enemyunits[2].xpos = 16;
-	enemyunits[2].ypos = 8;
-	enemyunits[3] = enemyPos[3];
-	enemyunits[3].xpos = 14;
-	enemyunits[3].ypos = 9;
-	enemyunits[0] = enemyPos[4];
-	enemyunits[0].xpos = 15;
-	enemyunits[0].ypos = 9;
-	enemyunits[1] = enemyPos[5];
-	enemyunits[1].xpos = 16;
-	enemyunits[1].ypos = 9;
-	enemyunits[2] = enemyPos[6];
-	enemyunits[2].xpos = 14;
-	enemyunits[2].ypos = 10;
-	enemyunits[3] = enemyPos[7];
-	enemyunits[3].xpos = 15;
-	enemyunits[3].ypos = 10;
-	enemyunits[0] = enemyPos[8];
-	enemyunits[0].xpos = 16;
-	enemyunits[0].ypos = 10;
-};
+var startPos;
+getCell(1, 1).innerHTML = "I";
+getCell(1, 1).className = "cell-discovered";
+getCell(1, 1).dataset.unit = 1;
+units[units.length] = new Unit("I", 1);
+units[units.length - 1].xpos = 1;
+units[units.length - 1].ypos = 1;
+getCell(1, 2).innerHTML = "I";
+getCell(1, 2).className = "cell-discovered";
+getCell(1, 2).dataset.unit = 2;
+units[units.length] = new Unit("I", 1);
+units[units.length - 1].xpos = 2;
+units[units.length - 1].ypos = 1;
+getCell(2, 1).innerHTML = "I";
+getCell(2, 1).className = "cell-discovered";
+getCell(2, 1).dataset.unit = 3;
+units[units.length] = new Unit("I", 1);
+units[units.length - 1].xpos = 1;
+units[units.length - 1].ypos = 2;
+getCell(2, 2).innerHTML = "I";
+getCell(2, 2).className = "cell-discovered";
+getCell(2, 2).dataset.unit = 4;
+units[units.length] = new Unit("I", 1);
+units[units.length - 1].xpos = 2;
+units[units.length - 1].ypos = 2;
+var enemyPos;
+getCell(9, 15).className = "cell-enemy";
+getCell(9, 16).className = "cell-enemy";
+getCell(10, 15).className = "cell-enemy";
+getCell(10, 16).className = "cell-enemy";
+enemyunits[0] = new Unit("I", 1);
+enemyunits[0].xpos = 15;
+enemyunits[0].ypos = 9;
+enemyunits[1] = new Unit("I", 1);
+enemyunits[1].xpos = 16;
+enemyunits[1].ypos = 9;
+enemyunits[2] = new Unit("I", 1);
+enemyunits[2].xpos = 15;
+enemyunits[2].ypos = 10;
+enemyunits[3] = new Unit("I", 1);
+enemyunits[3].xpos = 16;
+enemyunits[3].ypos = 10;
 
 updateCells();
 
 // Initialize action center
 
-pushMsg("Welcome to the Online Combat Simulator v1.1");
+pushMsg("Welcome to the Online Combat Simulator v1.2");
 // pushMsg("Progress: Level 1 (0/100 XP until Level 2)")
 // pushMsg("Your army: 8 Infantry 1 Officer");
 pushMsg("Type /help to access a list of commands");
+if (!localStorage) {
+	pushMsg("NOTE: Local Storage is either disabled or unsupported in your browser. Please enable Local Storage or use a supported browser to save your progress.");
+};
+if (!localStorage.first) {
+	localStorage.first = "true";
+	localStorage.version = "1.2";
+	pushMsg("First time? Type /firsttime in the box below for starter information.");
+};
+if (localStorage.version && Number(localStorage.version) < 1.2) {
+	pushMsg("Congrats on updating OCS! Type /info to view the changelog and see what's new.");
+};
+if (localStorage.version && Number(localStorage.version) > 1.2) {
+	pushMsg("WARNING: You are using an older version of OCS than you have previously saved data to. This is strongly not recommended.");
+};
 
 // Battle initialization
 
@@ -665,27 +1076,96 @@ function begin() {
 		allcells[i].className = "cell-unknown";
 	};
 	units = [];
-	startPos = [new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1), new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1, 20), new Unit("I", 1), new Unit("I", 1, 20), new Unit("O", 1)];
+	startPos = [];
+	for (var i = 0; i < levels[playerlvl - 1].length; i++) {
+		startPos[startPos.length] = new Unit((levels[playerlvl - 1])[i], 1);
+	};
+	startPos.reverse();
 	enemyunits = [];
-	enemyPos = [new Unit("I", 1, 20, "enemy"), new Unit("I", 1, 20, "enemy"), new Unit("I", 1, 20, "enemy"), new Unit("I", 1, 20, "enemy")];
-	rowsCovered = 1;
-	for (var i = 1; i <= 9; i++) {
-		if (i == 3 || i == 6 || i == 9) {
-			getCell(rowsCovered, (i / rowsCovered)).innerHTML = startPos[i - 1].type;
-			getCell(rowsCovered, (i / rowsCovered)).className = "cell-discovered";
-			getCell(rowsCovered, (i / rowsCovered)).dataset.unit = i;
-			units[units.length] = startPos[i - 1];
-			units[units.length - 1].xpos = i / rowsCovered;
-			units[units.length - 1].ypos = rowsCovered;
-			rowsCovered++;
-		} else {
-			getCell(rowsCovered, (i % 3)).innerHTML = startPos[i - 1].type;
-			getCell(rowsCovered, (i % 3)).className = "cell-discovered";
-			getCell(rowsCovered, (i % 3)).dataset.unit = i;
-			units[units.length] = startPos[i-1];
-			units[units.length - 1].xpos = i % 3;
-			units[units.length - 1].ypos = rowsCovered;
-		};
+	enemyPos = [];
+	for (var i = 0; i < levels[enemylvl - 1].length; i++) {
+		enemyPos[enemyPos.length] = new Unit((levels[enemylvl - 1])[i], 1, undefined, "enemy");
+	};
+	if (startPos.length == 4) {
+		units[0] = new Unit(startPos[0].type, 1);
+		getCell(1, 1).innerHTML = startPos[0].type;
+		getCell(1, 1).className = "cell-discovered";
+		getCell(1, 1).dataset.unit = 1;
+		units[1] = new Unit(startPos[1].type, 1);
+		getCell(1, 2).innerHTML = startPos[1].type;
+		getCell(1, 2).className = "cell-discovered";
+		getCell(1, 2).dataset.unit = 2;
+		units[2] = new Unit(startPos[2].type, 1);
+		getCell(2, 1).innerHTML = startPos[2].type;
+		getCell(2, 1).className = "cell-discovered";
+		getCell(2, 1).dataset.unit = 3;
+		units[3] = new Unit(startPos[3].type, 1);
+		getCell(2, 2).innerHTML = startPos[3].type;
+		getCell(2, 2).className = "cell-discovered";
+		getCell(2, 2).dataset.unit = 4;
+		units[0].xpos = 1;
+		units[0].ypos = 1;
+		units[1].xpos = 2;
+		units[1].ypos = 1;
+		units[2].xpos = 1;
+		units[2].ypos = 2;
+		units[3].xpos = 2;
+		units[3].ypos = 2;
+	} else {
+		units[0] = new Unit(startPos[0].type, 1);
+		getCell(1, 1).innerHTML = startPos[0].type;
+		getCell(1, 1).className = "cell-discovered";
+		getCell(1, 1).dataset.unit = 1;
+		units[1] = new Unit(startPos[1].type, 1);
+		getCell(1, 2).innerHTML = startPos[1].type;
+		getCell(1, 2).className = "cell-discovered";
+		getCell(1, 2).dataset.unit = 2;
+		units[2] = new Unit(startPos[2].type, 1);
+		getCell(1, 3).innerHTML = startPos[2].type;
+		getCell(1, 3).className = "cell-discovered";
+		getCell(1, 3).dataset.unit = 3;
+		units[3] = new Unit(startPos[3].type, 1);
+		getCell(2, 1).innerHTML = startPos[3].type;
+		getCell(2, 1).className = "cell-discovered";
+		getCell(2, 1).dataset.unit = 4;
+		units[4] = new Unit(startPos[4].type, 1);
+		getCell(2, 2).innerHTML = startPos[4].type;
+		getCell(2, 2).className = "cell-discovered";
+		getCell(2, 2).dataset.unit = 5;
+		units[5] = new Unit(startPos[5].type, 1);
+		getCell(2, 3).innerHTML = startPos[5].type;
+		getCell(2, 3).className = "cell-discovered";
+		getCell(2, 3).dataset.unit = 6;
+		units[6] = new Unit(startPos[6].type, 1);
+		getCell(3, 1).innerHTML = startPos[6].type;
+		getCell(3, 1).className = "cell-discovered";
+		getCell(3, 1).dataset.unit = 7;
+		units[7] = new Unit(startPos[7].type, 1);
+		getCell(3, 2).innerHTML = startPos[7].type;
+		getCell(3, 2).className = "cell-discovered";
+		getCell(3, 2).dataset.unit = 8;
+		units[8] = new Unit(startPos[8].type, 1);
+		getCell(3, 3).innerHTML = startPos[8].type;
+		getCell(3, 3).className = "cell-discovered";
+		getCell(3, 3).dataset.unit = 9;
+		units[0].xpos = 1;
+		units[0].ypos = 1;
+		units[1].xpos = 2;
+		units[1].ypos = 1;
+		units[2].xpos = 3;
+		units[2].ypos = 1;
+		units[3].xpos = 1;
+		units[3].ypos = 2;
+		units[4].xpos = 2;
+		units[4].ypos = 2;
+		units[5].xpos = 3;
+		units[5].ypos = 2;
+		units[6].xpos = 1;
+		units[6].ypos = 3;
+		units[7].xpos = 2;
+		units[7].ypos = 3;
+		units[8].xpos = 3;
+		units[8].ypos = 3;
 	};
 	var enemies = document.querySelectorAll(".cell-enemy");
 	for (var i = 0; i < enemies.length; i++) {
@@ -730,21 +1210,21 @@ function begin() {
 		enemyunits[3] = enemyPos[3];
 		enemyunits[3].xpos = 14;
 		enemyunits[3].ypos = 9;
-		enemyunits[0] = enemyPos[4];
-		enemyunits[0].xpos = 15;
-		enemyunits[0].ypos = 9;
-		enemyunits[1] = enemyPos[5];
-		enemyunits[1].xpos = 16;
-		enemyunits[1].ypos = 9;
-		enemyunits[2] = enemyPos[6];
-		enemyunits[2].xpos = 14;
-		enemyunits[2].ypos = 10;
-		enemyunits[3] = enemyPos[7];
-		enemyunits[3].xpos = 15;
-		enemyunits[3].ypos = 10;
-		enemyunits[0] = enemyPos[8];
-		enemyunits[0].xpos = 16;
-		enemyunits[0].ypos = 10;
+		enemyunits[4] = enemyPos[4];
+		enemyunits[4].xpos = 15;
+		enemyunits[4].ypos = 9;
+		enemyunits[5] = enemyPos[5];
+		enemyunits[5].xpos = 16;
+		enemyunits[5].ypos = 9;
+		enemyunits[6] = enemyPos[6];
+		enemyunits[6].xpos = 14;
+		enemyunits[6].ypos = 10;
+		enemyunits[7] = enemyPos[7];
+		enemyunits[7].xpos = 15;
+		enemyunits[7].ypos = 10;
+		enemyunits[8] = enemyPos[8];
+		enemyunits[8].xpos = 16;
+		enemyunits[8].ypos = 10;
 	};
 	updateCells();
 	var enemyconfig = document.querySelectorAll(".cell-enemy");
@@ -752,10 +1232,30 @@ function begin() {
 	for (var i = 0; i < enemylength; i++) {
 		enemyconfig[i].innerHTML = "";
 		enemyconfig[i].className = "cell-unknown";
-		delete enemyconfig[i].dataset.enemyunit
+		delete enemyconfig[i].dataset.enemyunit;
+	};
+	var roster = {
+		"I": 0,
+		"O": 0,
+		"C": 0,
+		"T": 0,
+		"M": 0,
+		"S": 0,
+		"A": 0,
+		"W": 0,
+		"N": 0
+	};
+	var rostertxt = "";
+	for (var i = 0; i < enemyunits.length; i++) {
+		roster[enemyunits[i].type]++;
+	};
+	for (var i in roster) {
+		if (roster[i] !== 0) {
+			rostertxt += (roster[i] + " " + unitDesc[i].name + " ");
+		};
 	};
 	pushMsg("Battle has begun!");
-	pushMsg("Enemy roster: 4 Infantry");
+	pushMsg("Enemy roster: " + rostertxt);
 	// pushMsg("Actions per Turn: " + apt);
 	pushMsg("Your turn!");
 	turn = "player";
